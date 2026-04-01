@@ -107,7 +107,7 @@ export default function CSVImportModal({ isOpen, onClose }) {
         const headers = (results.meta.fields || []).map(f => f.trim().replace(/^\uFEFF/, ''));
         
         const requiredEnglish = ['year', 'month', 'sales_value', 'quantity', 'avg_price'];
-        const requiredThai = ['เดือน', 'ยอดขาย(กก.)', 'มูลค่าขาย(บาท)', '@ A/V'];
+        const requiredThai = ['เดือน', 'ยอดขาย(กก.)', 'มูลค่าขาย(บาท)'];
         
         // Flexible check: remove spaces for matching
         const cleanHeader = (s) => (s || '').replace(/\s+/g, '');
@@ -145,13 +145,20 @@ export default function CSVImportModal({ isOpen, onClose }) {
               month = parsedDate.month;
               sales_value = parseFloat(String(getVal(row, 'มูลค่าขาย(บาท)') || '0').replace(/[^0-9.-]+/g, ""));
               quantity = parseFloat(String(getVal(row, 'ยอดขาย(กก.)') || '0').replace(/[^0-9.-]+/g, ""));
-              avg_price = parseFloat(String(getVal(row, '@ A/V') || '0').replace(/[^0-9.-]+/g, ""));
+              // Check various potential Thai headers for average price
+              const rawAvg = getVal(row, '@ A/V') || getVal(row, 'AV') || getVal(row, 'ราคาเฉลี่ย');
+              avg_price = parseFloat(String(rawAvg || '0').replace(/[^0-9.-]+/g, ""));
             } else {
               year = parseInt(getVal(row, 'year'));
               month = parseInt(getVal(row, 'month'));
               sales_value = parseFloat(String(getVal(row, 'sales_value') || '0').replace(/[^0-9.-]+/g, ""));
               quantity = parseFloat(String(getVal(row, 'quantity') || '0').replace(/[^0-9.-]+/g, ""));
               avg_price = parseFloat(String(getVal(row, 'avg_price') || '0').replace(/[^0-9.-]+/g, ""));
+            }
+
+            // Auto-calculate average price if missing or zero
+            if ((isNaN(avg_price) || avg_price === 0) && quantity > 0) {
+              avg_price = sales_value / quantity;
             }
 
             if (isNaN(year) || isNaN(month)) {
